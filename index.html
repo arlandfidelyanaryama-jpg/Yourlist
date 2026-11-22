@@ -1,0 +1,476 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YourList - Task Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#10121c;--panel:#1c2030;--surface:#292e40;--line:#343b50;--purple:#8968f0;--text:#fff;--muted:#a5a9ba}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button,input,select,textarea{font:inherit}
+button{border:0;cursor:pointer}
+.hidden{display:none!important}
+.layout{min-height:100vh}
+.sidebar{display:none}
+.mobile-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font-size:25px;font-weight:bold;color:#b6a2ff}
+.mobile-head span{font-size:12px;color:var(--muted)}
+main{width:100%;max-width:1500px;margin:auto;padding:22px}
+.page-head{margin:8px 0 22px}
+.page-head h1{font-size:29px;color:#b6a2ff}
+.page-head p{color:var(--muted);margin-top:7px}
+.card{background:var(--panel);padding:20px;border-radius:16px;border:1px solid var(--line);margin-bottom:18px}
+h2{font-size:19px;margin-bottom:15px}
+input,select,textarea{width:100%;padding:13px;margin-top:10px;border-radius:9px;border:1px solid #424960;background:var(--surface);color:white;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--purple)}
+textarea{min-height:90px;resize:vertical}
+label{display:block;margin-top:13px;font-size:13px;color:#c4c6d1}
+button{background:var(--purple);color:white;padding:12px 15px;border-radius:9px;font-weight:bold}
+button:disabled{opacity:.6;cursor:wait}
+.primary{width:100%;margin-top:12px}
+.secondary{background:#343b50}
+.danger{background:#b94b5a}
+.green{background:#287e68}
+.muted{color:var(--muted);font-size:13px}
+#message{color:#c4b5fd;margin-top:12px;font-size:13px}
+.auth-wrap{max-width:480px;margin:55px auto}
+.auth-wrap h1{font-size:32px;color:#b6a2ff;margin-bottom:8px}
+.auth-wrap .subtitle{color:var(--muted);margin-bottom:22px}
+.profile{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.profile p{font-size:13px;color:var(--muted);overflow-wrap:anywhere;margin-top:5px}
+.profile button{width:auto}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.stat{background:var(--surface);padding:17px;border-radius:12px}
+.stat strong{display:block;color:#b9a5ff;font-size:25px}
+.stat span{font-size:12px;color:var(--muted)}
+.workspace{display:grid;grid-template-columns:1fr;gap:18px}
+.file-info{font-size:12px;color:#b8a8ff;margin-top:8px}
+.task{background:var(--surface);padding:16px;border-radius:12px;margin-top:12px;border-left:4px solid #987cff}
+.task.done{opacity:.7;border-left-color:#38b99a}
+.task p{color:#ccc;margin-top:8px;overflow-wrap:anywhere;line-height:1.5}
+.task small{display:block;color:#aaa;margin-top:8px;overflow-wrap:anywhere}
+.task.done .task-title{text-decoration:line-through}
+.actions{display:flex;gap:8px;margin-top:13px}
+.actions button{flex:1;font-size:12px;padding:10px 5px}
+.task-attachment{width:100%;margin-top:12px;text-align:left}
+.empty{text-align:center;padding:25px 10px;color:var(--muted)}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.section-title h2{margin:0}
+@media(min-width:900px){
+ .layout{display:grid;grid-template-columns:250px minmax(0,1fr)}
+ .sidebar{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;background:#191c2a;border-right:1px solid var(--line);padding:27px 18px}
+ .side-brand{font-size:27px;font-weight:bold;color:#b6a2ff;margin:0 10px 8px}
+ .side-caption{font-size:12px;color:var(--muted);margin:0 10px 35px}
+ .nav-label{font-size:11px;color:#85899c;margin:0 10px 12px;text-transform:uppercase;letter-spacing:1px}
+ .nav-link{display:block;text-decoration:none;color:#c5c7d3;padding:13px 14px;border-radius:9px;margin-bottom:7px;font-size:14px}
+ .nav-link:hover,.nav-link.active{background:#30294b;color:#c5b2ff}
+ .side-bottom{margin-top:auto;color:#85899c;font-size:12px;padding:12px}
+ .mobile-head{display:none}
+ main{padding:35px 38px}
+ .page-head{margin-top:0}
+ .page-head h1{font-size:34px}
+ .stats{gap:16px}
+ .stat{padding:21px}
+ .workspace{grid-template-columns:minmax(300px,.85fr) minmax(380px,1.15fr);align-items:start}
+ .card{padding:23px}
+}
+@media(max-width:480px){
+ main{padding:15px}
+ .stats{gap:7px}
+ .stat{padding:12px 9px}
+ .stat strong{font-size:21px}
+ .stat span{font-size:10px}
+ .actions{gap:5px}
+ .actions button{font-size:11px}
+ .profile{align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+<aside class="sidebar">
+ <div class="side-brand">YourList ✦</div>
+ <div class="side-caption">Atur tugasmu, capai tujuanmu.</div>
+ <div class="nav-label">Menu utama</div>
+ <a class="nav-link active" href="#dashboard">▦ Dashboard</a>
+ <a class="nav-link" href="#taskForm">＋ Tambah Tugas</a>
+ <a class="nav-link" href="#taskList">☷ Daftar Tugas</a>
+ <div class="side-bottom">YourList Task Manager<br>Versi 2.0</div>
+</aside>
+
+<div>
+<header class="mobile-head">
+ <div>
+  <div class="brand">YourList ✦</div>
+  <span>Task Manager</span>
+ </div>
+ <span>Versi 2.0</span>
+</header>
+
+<main>
+<section id="auth" class="auth-wrap">
+ <h1>YourList ✦</h1>
+ <p class="subtitle">Atur tugasmu, capai tujuanmu.</p>
+ <div class="card">
+  <h2>Selamat Datang</h2>
+  <p class="muted">Masuk atau buat akun YourList.</p>
+  <input id="email" type="email" placeholder="Alamat email">
+  <input id="password" type="password" placeholder="Password">
+  <button class="primary" onclick="register()">Daftar Akun</button>
+  <button class="primary secondary" onclick="login()">Login</button>
+  <p id="message"></p>
+ </div>
+</section>
+
+<section id="app" class="hidden">
+ <div id="dashboard" class="page-head">
+  <h1>Dashboard</h1>
+  <p>Selamat datang kembali! Saatnya mengatur aktivitasmu.</p>
+ </div>
+
+ <div class="card profile">
+  <div>
+   <h3>Profil Pengguna</h3>
+   <p id="userEmail"></p>
+  </div>
+  <button class="secondary" onclick="logout()">Logout</button>
+ </div>
+
+ <div class="stats">
+  <div class="stat"><strong id="totalCount">0</strong><span>Total tugas</span></div>
+  <div class="stat"><strong id="doneCount">0</strong><span>Selesai</span></div>
+  <div class="stat"><strong id="pendingCount">0</strong><span>Belum selesai</span></div>
+ </div>
+
+ <div class="workspace">
+  <section id="taskForm" class="card">
+   <h2 id="formHeading">＋ Tambah Tugas</h2>
+   <input id="title" placeholder="Nama tugas">
+   <textarea id="description" placeholder="Deskripsi atau catatan tugas..."></textarea>
+
+   <label>Kategori</label>
+   <select id="category">
+    <option value="Sekolah">Sekolah</option>
+    <option value="Pribadi">Pribadi</option>
+    <option value="Pekerjaan">Pekerjaan</option>
+    <option value="Lainnya">Lainnya</option>
+   </select>
+
+   <label>Deadline</label>
+   <input id="deadline" type="datetime-local">
+   <label>Waktu pengingat</label>
+   <input id="reminder" type="datetime-local">
+
+   <label>Foto dari kamera</label>
+   <input id="cameraFile" type="file" accept="image/*" capture="environment">
+   <label>Foto dari galeri</label>
+   <input id="galleryFile" type="file" accept="image/jpeg,image/png,image/webp">
+   <label>Dokumen PDF atau Word</label>
+   <input id="documentFile" type="file" accept=".pdf,.doc,.docx">
+   <p id="fileInfo" class="file-info">Belum ada lampiran baru dipilih.</p>
+
+   <button class="primary" onclick="saveTask()" id="saveButton">+ Tambahkan Tugas</button>
+   <button class="primary secondary hidden" id="cancelEdit" onclick="resetForm()">Batal Edit</button>
+   <button class="primary secondary" onclick="enableNotifications()">Aktifkan Notifikasi</button>
+   <p class="muted" style="margin-top:10px">Pengingat lokal berjalan ketika halaman YourList terbuka.</p>
+  </section>
+
+  <section id="taskList" class="card">
+   <div class="section-title">
+    <h2>Daftar Tugas</h2>
+   </div>
+   <input id="search" placeholder="Cari tugas..." oninput="renderTasks()">
+   <select id="filter" onchange="renderTasks()">
+    <option value="Semua">Semua kategori</option>
+    <option value="Sekolah">Sekolah</option>
+    <option value="Pribadi">Pribadi</option>
+    <option value="Pekerjaan">Pekerjaan</option>
+    <option value="Lainnya">Lainnya</option>
+   </select>
+   <select id="statusFilter" onchange="renderTasks()">
+    <option value="Semua">Semua status</option>
+    <option value="Belum">Belum selesai</option>
+    <option value="Selesai">Sudah selesai</option>
+   </select>
+   <div id="tasks" class="muted" style="margin-top:12px">Memuat tugas...</div>
+  </section>
+ </div>
+</section>
+</main>
+</div>
+</div>
+
+<script>
+// KONFIGURASI SUPABASE
+const SUPABASE_URL="https://muznrhmgmvotadltlgnd.supabase.co";
+const SUPABASE_KEY="sb_publishable_PPNUdFUFUIy4m2TYRJCphw_JGHEe7jZ";
+const BUCKET="task-attachments";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null,taskList=[],editingId=null,editingAttachment=null,reminderTimer=null;
+const notified=new Set();
+
+function message(text){document.getElementById("message").textContent=text}
+
+function getFile(){
+ return document.getElementById("cameraFile").files[0]||
+ document.getElementById("galleryFile").files[0]||
+ document.getElementById("documentFile").files[0]||null;
+}
+
+function fileChanged(){
+ const file=getFile();
+ document.getElementById("fileInfo").textContent=file?
+ "Lampiran dipilih: "+file.name:"Belum ada lampiran baru dipilih.";
+}
+
+["cameraFile","galleryFile","documentFile"].forEach(id=>{
+ document.getElementById(id).addEventListener("change",()=>{
+  ["cameraFile","galleryFile","documentFile"].forEach(other=>{
+   if(other!==id)document.getElementById(other).value="";
+  });
+  fileChanged();
+ });
+});
+
+async function register(){
+ const email=document.getElementById("email").value.trim();
+ const password=document.getElementById("password").value;
+ if(!email||!password)return message("Isi email dan password.");
+ const {data,error}=await db.auth.signUp({email,password});
+ if(error)return message(error.message);
+ message(data.session?"Pendaftaran berhasil.":"Pendaftaran berhasil. Periksa email untuk konfirmasi.");
+}
+
+async function login(){
+ const email=document.getElementById("email").value.trim();
+ const password=document.getElementById("password").value;
+ if(!email||!password)return message("Isi email dan password.");
+ const {error}=await db.auth.signInWithPassword({email,password});
+ if(error)message(error.message);
+}
+
+async function logout(){
+ const {error}=await db.auth.signOut();
+ if(error)alert(error.message);
+}
+
+async function updateScreen(session){
+ currentUser=session?.user||null;
+ document.getElementById("auth").classList.toggle("hidden",!!currentUser);
+ document.getElementById("app").classList.toggle("hidden",!currentUser);
+ if(currentUser){
+  document.getElementById("userEmail").textContent=currentUser.email;
+  await loadTasks();
+  if(reminderTimer)clearInterval(reminderTimer);
+  reminderTimer=setInterval(checkReminders,30000);
+  checkReminders();
+ }else{
+  taskList=[];
+  if(reminderTimer)clearInterval(reminderTimer);
+ }
+}
+
+async function uploadAttachment(file){
+ if(!file)return editingAttachment;
+ const allowed=["image/jpeg","image/png","image/webp","application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+ if(!allowed.includes(file.type))throw new Error("Format file tidak didukung.");
+ if(file.size>10*1024*1024)throw new Error("Ukuran file maksimal 10 MB.");
+ const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+ const path=currentUser.id+"/"+crypto.randomUUID()+"_"+safeName;
+ const {error}=await db.storage.from(BUCKET).upload(path,file,{upsert:false});
+ if(error)throw error;
+ return {path,name:file.name};
+}
+
+async function saveTask(){
+ const title=document.getElementById("title").value.trim();
+ if(!title)return alert("Nama tugas wajib diisi.");
+ const button=document.getElementById("saveButton");
+ const wasEditing=!!editingId;
+ button.disabled=true;
+ button.textContent="Menyimpan...";
+ try{
+  const attachment=await uploadAttachment(getFile());
+  const deadlineValue=document.getElementById("deadline").value;
+  const reminderValue=document.getElementById("reminder").value;
+  const payload={
+   title,
+   description:document.getElementById("description").value.trim(),
+   category:document.getElementById("category").value,
+   deadline:deadlineValue?new Date(deadlineValue).toISOString():null,
+   reminder_at:reminderValue?new Date(reminderValue).toISOString():null,
+   attachment_path:attachment?.path||null,
+   attachment_name:attachment?.name||null,
+   updated_at:new Date().toISOString()
+  };
+  let result;
+  if(editingId)result=await db.from("tasks").update(payload).eq("id",editingId);
+  else{payload.user_id=currentUser.id;result=await db.from("tasks").insert(payload)}
+  if(result.error)throw result.error;
+  resetForm();
+  await loadTasks();
+  alert(wasEditing?"Perubahan tugas berhasil disimpan.":"Tugas berhasil ditambahkan.");
+ }catch(error){alert("Gagal menyimpan: "+error.message)}
+ finally{
+  button.disabled=false;
+  button.textContent=editingId?"Simpan Perubahan":"+ Tambahkan Tugas";
+ }
+}
+
+async function loadTasks(){
+ const {data,error}=await db.from("tasks").select("*").order("created_at",{ascending:false});
+ if(error){document.getElementById("tasks").textContent=error.message;return}
+ taskList=data||[];
+ renderTasks();
+}
+
+function renderTasks(){
+ const area=document.getElementById("tasks");
+ area  .innerHTML="";
+ const search=document.getElementById("search").value.toLowerCase();
+ const category=document.getElementById("filter").value;
+ const status=document.getElementById("statusFilter").value;
+ const filtered=taskList.filter(task=>{
+  const matchesSearch=task.title.toLowerCase().includes(search);
+  const matchesCategory=category==="Semua"||task.category===category;
+  const matchesStatus=status==="Semua"||(status==="Selesai"&&task.is_completed)||(status==="Belum"&&!task.is_completed);
+  return matchesSearch&&matchesCategory&&matchesStatus;
+ });
+ document.getElementById("totalCount").textContent=taskList.length;
+ document.getElementById("doneCount").textContent=taskList.filter(t=>t.is_completed).length;
+ document.getElementById("pendingCount").textContent=taskList.filter(t=>!t.is_completed).length;
+ if(!filtered.length){area.innerHTML='<div class="empty">Belum ada tugas yang cocok.</div>';return}
+ filtered.forEach(task=>{
+  const item=document.createElement("div");
+  item.className="task"+(task.is_completed?" done":"");
+  const title=document.createElement("h3");
+  title.className="task-title";
+  title.textContent=task.title;
+  item.append(title);
+  const cat=document.createElement("small");
+  cat.textContent="Kategori: "+(task.category||"-");
+  item.append(cat);
+  if(task.description){
+   const desc=document.createElement("p");
+   desc.textContent=task.description;
+   item.append(desc);
+  }
+  if(task.deadline){
+   const date=document.createElement("small");
+   date.textContent="Deadline: "+new Date(task.deadline).toLocaleString("id-ID");
+   item.append(date);
+  }
+  if(task.reminder_at){
+   const rem=document.createElement("small");
+   rem.textContent="Pengingat: "+new Date(task.reminder_at).toLocaleString("id-ID");
+   item.append(rem);
+  }
+  if(task.attachment_path){
+   const att=document.createElement("button");
+   att.className="secondary task-attachment";
+   att.textContent="Lihat lampiran: "+(task.attachment_name||"File");
+   att.onclick=()=>openAttachment(task.attachment_path);
+   item.append(att);
+  }
+  const actions=document.createElement("div");
+  actions.className="actions";
+  const done=document.createElement("button");
+  done.className="green";
+  done.textContent=task.is_completed?"Batalkan":"Selesai";
+  done.onclick=()=>toggleTask(task);
+  const edit=document.createElement("button");
+  edit.className="secondary";
+  edit.textContent="Edit";
+  edit.onclick=()=>editTask(task);
+  const del=document.createElement("button");
+  del.className="danger";
+  del.textContent="Hapus";
+  del.onclick=()=>deleteTask(task);
+  actions.append(done,edit,del);
+  item.append(actions);
+  area.append(item);
+ });
+}
+
+async function openAttachment(path){
+ const {data,error}=await db.storage.from(BUCKET).createSignedUrl(path,300);
+ if(error)return alert(error.message);
+ window.open(data.signedUrl,"_blank");
+}
+
+function toLocalInput(value){
+ const date=new Date(value);
+ const offset=date.getTimezoneOffset()*60000;
+ return new Date(date.getTime()-offset).toISOString().slice(0,16);
+}
+
+function editTask(task){
+ editingId=task.id;
+ editingAttachment=task.attachment_path?{path:task.attachment_path,name:task.attachment_name}:null;
+ document.getElementById("title").value=task.title;
+ document.getElementById("description").value=task.description||"";
+ document.getElementById("category").value=task.category||"Sekolah";
+ document.getElementById("deadline").value=task.deadline?toLocalInput(task.deadline):"";
+ document.getElementById("reminder").value=task.reminder_at?toLocalInput(task.reminder_at):"";
+ document.getElementById("formHeading").textContent="Edit Tugas";
+ document.getElementById("saveButton").textContent="Simpan Perubahan";
+ document.getElementById("cancelEdit").classList.remove("hidden");
+ document.getElementById("fileInfo").textContent=task.attachment_name?"Lampiran saat ini: "+task.attachment_name:"Belum ada lampiran.";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function resetForm(){
+ editingId=null;
+ editingAttachment=null;
+ ["title","description","deadline","reminder","cameraFile","galleryFile","documentFile"].forEach(id=>document.getElementById(id).value="");
+ document.getElementById("formHeading").textContent="＋ Tambah Tugas";
+ document.getElementById("saveButton").textContent="+ Tambahkan Tugas";
+ document.getElementById("cancelEdit").classList.add("hidden");
+ document.getElementById("fileInfo").textContent="Belum ada lampiran baru dipilih.";
+}
+
+async function toggleTask(task){
+ const {error}=await db.from("tasks").update({is_completed:!task.is_completed}).eq("id",task.id);
+ if(error)alert(error.message);else loadTasks();
+}
+
+async function deleteTask(task){
+ if(!confirm("Yakin ingin menghapus tugas ini?"))return;
+ if(task.attachment_path){
+  const {error}=await db.storage.from(BUCKET).remove([task.attachment_path]);
+  if(error){alert("Gagal menghapus lampiran: "+error.message);return}
+ }
+ const {error}=await db.from("tasks").delete().eq("id",task.id);
+ if(error)alert(error.message);else loadTasks();
+}
+
+async function enableNotifications(){
+ if(!("Notification" in window))return alert("Browser tidak mendukung notifikasi.");
+ const permission=await Notification.requestPermission();
+ alert(permission==="granted"?"Notifikasi berhasil diaktifkan.":"Izin notifikasi belum diberikan.");
+}
+
+function checkReminders(){
+ if(!currentUser||!("Notification" in window)||Notification.permission!=="granted")return;
+ const now=Date.now();
+ taskList.forEach(task=>{
+  if(!task.reminder_at||task.is_completed)return;
+  const time=new Date(task.reminder_at).getTime();
+  const key=task.id+"_"+task.reminder_at;
+  if(time<=now&&time>now-60000&&!notified.has(key)){
+   new Notification("Pengingat YourList",{body:"Waktunya mengerjakan: "+task.title});
+   notified.add(key);
+  }
+ });
+}
+
+db.auth.onAuthStateChange((_event,session)=>{updateScreen(session)});
+db.auth.getSession().then(({data})=>{updateScreen(data.session)});
+</script>
+</body>
+</html>
